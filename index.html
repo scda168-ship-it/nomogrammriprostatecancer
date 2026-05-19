@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NCI Prostate Cancer Preoperative Nomogram</title>
+  <style>
+    :root {
+      --blue:    #1a4f8a;
+      --blue-lt: #2d6cc0;
+      --teal:    #0e7490;
+      --bg:      #f0f4f8;
+      --card:    #ffffff;
+      --border:  #d1dde8;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --green:   #16a34a;
+      --amber:   #d97706;
+      --red:     #dc2626;
+      --radius:  10px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--teal) 100%);
+      color: #fff;
+      padding: 28px 24px 24px;
+      text-align: center;
+    }
+    header .badge {
+      display: inline-block;
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 20px;
+      font-size: .72rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 3px 14px;
+      margin-bottom: 10px;
+    }
+    header h1 { font-size: clamp(1.3rem, 4vw, 1.85rem); font-weight: 700; line-height: 1.25; }
+    header p  { margin-top: 6px; font-size: .88rem; opacity: .85; }
+
+    /* ── Layout ── */
+    .container { max-width: 980px; margin: 0 auto; padding: 28px 16px 60px; }
+
+    .disclaimer {
+      background: #fef9c3;
+      border-left: 4px solid #ca8a04;
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: .82rem;
+      color: #78350f;
+      margin-bottom: 24px;
+    }
+
+    /* ── Section card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      background: var(--blue);
+      color: #fff;
+      padding: 10px 20px;
+      font-size: .82rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .card-body { padding: 20px; }
+
+    /* ── Form grid ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 18px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.wide { grid-column: 1 / -1; }
+
+    label {
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    label .req { color: var(--red); margin-left: 2px; }
+
+    input[type="number"], select {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: .93rem;
+      color: var(--text);
+      background: #f8fafc;
+      width: 100%;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input[type="number"]:focus, select:focus {
+      outline: none;
+      border-color: var(--blue-lt);
+      box-shadow: 0 0 0 3px rgba(45,108,192,.15);
+      background: #fff;
+    }
+
+    .hint { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Radio group ── */
+    .radio-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+    .radio-label {
+      display: flex; align-items: center; gap: 6px;
+      cursor: pointer;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: .88rem;
+      font-weight: 500;
+      transition: background .12s, border-color .12s;
+    }
+    .radio-label:has(input:checked) {
+      background: #dbeafe;
+      border-color: var(--blue-lt);
+      color: var(--blue);
+    }
+    .radio-label input { accent-color: var(--blue-lt); }
+
+    /* ── Calculate button ── */
+    .btn-calc {
+      display: block;
+      width: 100%;
+      max-width: 340px;
+      margin: 24px auto 0;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-lt) 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn-calc:hover  { opacity: .92; transform: translateY(-1px); }
+    .btn-calc:active { transform: translateY(0); }
+
+    /* ── Results ── */
+    #results { display: none; }
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .result-card {
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .result-card .rc-head {
+      padding: 10px 16px;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+    .rc-ece  .rc-head { background: #1d4ed8; }
+    .rc-svi  .rc-head { background: #0369a1; }
+    .rc-bcr  .rc-head { background: #0f766e; }
+
+    .result-card .rc-body {
+      background: var(--card);
+      padding: 18px 16px;
+    }
+
+    .prob-display {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .prob-num {
+      font-size: 2.6rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .prob-pct { font-size: 1.2rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+    .prob-label { font-size: .78rem; color: var(--muted); margin-bottom: 12px; }
+
+    /* Bar */
+    .bar-wrap {
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width .6s ease;
+    }
+    .risk-low    { color: var(--green); }
+    .risk-inter  { color: var(--amber); }
+    .risk-high   { color: var(--red);   }
+    .bar-low     { background: var(--green); }
+    .bar-inter   { background: var(--amber); }
+    .bar-high    { background: var(--red);   }
+
+    .risk-label-tag {
+      display: inline-block;
+      font-size: .72rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .tag-low   { background: #dcfce7; color: var(--green); }
+    .tag-inter { background: #fef3c7; color: var(--amber); }
+    .tag-high  { background: #fee2e2; color: var(--red);   }
+
+    .auc-badge {
+      font-size: .72rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    /* ── BCR survival display ── */
+    .survival-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .survival-row span:first-child { font-size: .8rem; color: var(--muted); }
+    .survival-row span:last-child  { font-size: .9rem; font-weight: 700; }
+
+    /* ── LP breakdown ── */
+    .lp-table {
+      width: 100%;
+      font-size: .78rem;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    .lp-table th {
+      text-align: left;
+      padding: 4px 6px;
+      color: var(--muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .lp-table td { padding: 4px 6px; }
+    .lp-table tr:nth-child(even) td { background: #f8fafc; }
+    .val-pos { color: var(--red);   font-weight: 600; }
+    .val-neg { color: var(--green); font-weight: 600; }
+    .val-zer { color: var(--muted); }
+
+    details summary {
+      font-size: .78rem;
+      color: var(--blue-lt);
+      cursor: pointer;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+    details summary:hover { text-decoration: underline; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      font-size: .75rem;
+      color: var(--muted);
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+    }
+
+    @media (max-width: 480px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .results-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">NCI Prostate Cancer Program</div>
+  <h1>Preoperative Prostate Cancer Nomogram</h1>
+  <p>ECE · SVI · Biochemical Recurrence &nbsp;|&nbsp; MRI-enhanced predictive models</p>
+</header>
+
+<div class="container">
+
+  <div class="disclaimer">
+    <strong>Clinical Decision Support Tool — Not a substitute for clinical judgment.</strong>
+    This nomogram is intended for research and educational purposes. All predictions should be interpreted
+    by qualified clinicians in the context of the individual patient's complete clinical picture.
+  </div>
+
+  <!-- ══ INPUT FORM ══ -->
+  <div class="card">
+    <div class="card-header">Patient &amp; Biopsy Characteristics</div>
+    <div class="card-body">
+      <div class="form-grid">
+
+        <!-- Age -->
+        <div class="form-group">
+          <label>Age (years)<span class="req">*</span></label>
+          <input type="number" id="age" min="30" max="100" step="1" placeholder="e.g. 65" />
+          <span class="hint">Used in BCR model</span>
+        </div>
+
+        <!-- PSA Density -->
+        <div class="form-group">
+          <label>PSA Density (ng/mL²)<span class="req">*</span></label>
+          <input type="number" id="psad" min="0" step="0.001" placeholder="e.g. 0.15" />
+          <span class="hint">PSA ÷ prostate volume; natural log applied</span>
+        </div>
+
+        <!-- EPE Score -->
+        <div class="form-group">
+          <label>EPE Score<span class="req">*</span></label>
+          <input type="number" id="epe" min="0" max="20" step="0.1" placeholder="e.g. 2.0" />
+          <span class="hint">Radiologic extraprostatic extension score</span>
+        </div>
+
+        <!-- % Positive Cores -->
+        <div class="form-group">
+          <label>% Positive Cores<span class="req">*</span></label>
+          <input type="number" id="pct_pos" min="0" max="100" step="1" placeholder="e.g. 50" />
+          <span class="hint">Percentage (0–100)</span>
+        </div>
+
+        <!-- Max Core Involved -->
+        <div class="form-group">
+          <label>Max Core Involvement (%)<span class="req">*</span></label>
+          <input type="number" id="max_core" min="0" max="100" step="1" placeholder="e.g. 60" />
+          <span class="hint">Greatest % of any single core</span>
+        </div>
+
+        <!-- Grade Group -->
+        <div class="form-group">
+          <label>Grade Group (ISUP)<span class="req">*</span></label>
+          <select id="grade">
+            <option value="">— Select —</option>
+            <option value="1">GG 1 (Gleason 3+3)</option>
+            <option value="2">GG 2 (Gleason 3+4)</option>
+            <option value="3">GG 3 (Gleason 4+3)</option>
+            <option value="45">GG 4/5 (Gleason 8–10)</option>
+          </select>
+        </div>
+
+        <!-- PI-RADS -->
+        <div class="form-group">
+          <label>PI-RADS Score<span class="req">*</span></label>
+          <select id="pirads">
+            <option value="">— Select —</option>
+            <option value="le3">≤ 3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+
+        <!-- SVI on MRI -->
+        <div class="form-group">
+          <label>SVI on MRI<span class="req">*</span></label>
+          <select id="svi_mri">
+            <option value="">— Select —</option>
+            <option value="0">0 — Absent</option>
+            <option value="1">1 — Possible</option>
+            <option value="2">2 — Definite</option>
+          </select>
+          <span class="hint">Seminal vesicle invasion on MRI</span>
+        </div>
+
+        <!-- Clinical Stage -->
+        <div class="form-group wide">
+          <label>Clinical Stage<span class="req">*</span></label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="stage" value="0" /> &lt; T2 (cT1)
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="stage" value="1" /> ≥ T2 (cT2–T4)
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <button class="btn-calc" onclick="calculate()">Calculate Nomogram Predictions</button>
+    </div>
+  </div>
+
+  <!-- ══ RESULTS ══ -->
+  <div id="results">
+
+    <div class="results-grid">
+
+      <!-- ECE Card -->
+      <div class="result-card rc-ece">
+        <div class="rc-head">Extracapsular Extension (ECE)</div>
+        <div class="rc-body">
+          <div class="prob-display">
+            <span class="prob-num" id="ece-pct">—</span>
+            <span class="prob-pct">%</span>
+          </div>
+          <div class="prob-label">Predicted probability of ECE</div>
+          <div class="bar-wrap"><div class="bar-fill" id="ece-bar" style="width:0%"></div></div>
+          <span class="risk-label-tag" id="ece-tag"></span>
+          <div class="auc-badge">Logistic model · AUC = 0.799</div>
+          <details>
+            <summary>Show linear predictor breakdown</summary>
+            <table class="lp-table" id="ece-lp-table"></table>
+          </details>
+        </div>
+      </div>
+
+      <!-- SVI Card -->
+      <div class="result-card rc-svi">
+        <div class="rc-head">Seminal Vesicle Invasion (SVI)</div>
+        <div class="rc-body">
+          <div class="prob-display">
+            <span class="prob-num" id="svi-pct">—</span>
+            <span class="prob-pct">%</span>
+          </div>
+          <div class="prob-label">Predicted probability of SVI</div>
+          <div class="bar-wrap"><div class="bar-fill" id="svi-bar" style="width:0%"></div></div>
+          <span class="risk-label-tag" id="svi-tag"></span>
+          <div class="auc-badge">Logistic model · AUC = 0.839</div>
+          <details>
+            <summary>Show linear predictor breakdown</summary>
+            <table class="lp-table" id="svi-lp-table"></table>
+          </details>
+        </div>
+      </div>
+
+      <!-- BCR Card -->
+      <div class="result-card rc-bcr">
+        <div class="rc-head">Biochemical Recurrence (BCR)</div>
+        <div class="rc-body">
+          <div class="survival-row">
+            <span>BCR-free survival at 5 years</span>
+            <span id="bcr-surv">—</span>
+          </div>
+          <div class="survival-row">
+            <span>BCR risk at 5 years</span>
+            <span id="bcr-risk-val">—</span>
+          </div>
+          <div class="bar-wrap" style="margin-top:10px"><div class="bar-fill" id="bcr-bar" style="width:0%"></div></div>
+          <span class="risk-label-tag" id="bcr-tag" style="margin-top:6px;display:inline-block"></span>
+          <div class="auc-badge" style="margin-top:8px">Cox PH model · C-index = 0.735 · Baseline S₀(60mo) = 0.249</div>
+          <details>
+            <summary>Show linear predictor breakdown</summary>
+            <table class="lp-table" id="bcr-lp-table"></table>
+          </details>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Interpretation guide -->
+    <div class="card">
+      <div class="card-header">Risk Category Thresholds</div>
+      <div class="card-body">
+        <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:.83rem;">
+          <div>
+            <span class="risk-label-tag tag-low">Low</span>
+            &nbsp;ECE / SVI &lt; 20% &nbsp;|&nbsp; BCR-risk &lt; 20%
+          </div>
+          <div>
+            <span class="risk-label-tag tag-inter">Intermediate</span>
+            &nbsp;20–50%
+          </div>
+          <div>
+            <span class="risk-label-tag tag-high">High</span>
+            &nbsp;&gt; 50%
+          </div>
+        </div>
+        <p style="margin-top:10px;font-size:.78rem;color:var(--muted);">
+          Thresholds are illustrative. Clinical decisions should incorporate patient values, surgical expertise, and multidisciplinary input.
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /results -->
+
+</div><!-- /container -->
+
+<footer>
+  NCI Prostate Cancer Preoperative Nomogram &nbsp;·&nbsp; Model coefficients from published NCI dataset (M3 specifications)
+  &nbsp;·&nbsp; For research &amp; educational use only
+</footer>
+
+<script>
+// ── Sigmoid helper ──
+const sigmoid = lp => 1 / (1 + Math.exp(-lp));
+
+// ── Risk label helper ──
+function riskLabel(p) {
+  if (p < 0.20) return { text: 'Low Risk',          cls: 'tag-low',   barCls: 'bar-low',   textCls: 'risk-low'   };
+  if (p < 0.50) return { text: 'Intermediate Risk', cls: 'tag-inter', barCls: 'bar-inter', textCls: 'risk-inter' };
+  return              { text: 'High Risk',           cls: 'tag-high',  barCls: 'bar-high',  textCls: 'risk-high'  };
+}
+
+// ── LP table builder ──
+function buildLPTable(rows, total) {
+  const fmtCoeff = v => {
+    const s = v.toFixed(3);
+    const cls = v > 0.0005 ? 'val-pos' : v < -0.0005 ? 'val-neg' : 'val-zer';
+    return `<span class="${cls}">${v >= 0 ? '+' : ''}${s}</span>`;
+  };
+  let html = '<thead><tr><th>Term</th><th>Coefficient</th><th>Value</th><th>Contribution</th></tr></thead><tbody>';
+  rows.forEach(r => {
+    html += `<tr><td>${r.name}</td><td>${fmtCoeff(r.coeff)}</td><td>${r.val}</td><td>${fmtCoeff(r.contribution)}</td></tr>`;
+  });
+  html += `</tbody><tfoot><tr><td colspan="3"><strong>Linear Predictor Total</strong></td><td>${fmtCoeff(total)}</td></tr></tfoot>`;
+  return html;
+}
+
+// ── Main calculation ──
+function calculate() {
+  // Gather inputs
+  const age      = parseFloat(document.getElementById('age').value);
+  const psad     = parseFloat(document.getElementById('psad').value);
+  const epe      = parseFloat(document.getElementById('epe').value);
+  const pct_pos  = parseFloat(document.getElementById('pct_pos').value);
+  const max_core = parseFloat(document.getElementById('max_core').value);
+  const grade    = document.getElementById('grade').value;
+  const pirads   = document.getElementById('pirads').value;
+  const svi_mri  = document.getElementById('svi_mri').value;
+  const stageEl  = document.querySelector('input[name="stage"]:checked');
+
+  // Validation
+  const missing = [];
+  if (isNaN(age))           missing.push('Age');
+  if (isNaN(psad) || psad <= 0) missing.push('PSA Density (must be > 0)');
+  if (isNaN(epe))           missing.push('EPE Score');
+  if (isNaN(pct_pos))       missing.push('% Positive Cores');
+  if (isNaN(max_core))      missing.push('Max Core Involvement');
+  if (!grade)               missing.push('Grade Group');
+  if (!pirads)              missing.push('PI-RADS Score');
+  if (!svi_mri)             missing.push('SVI on MRI');
+  if (!stageEl)             missing.push('Clinical Stage');
+
+  if (missing.length) {
+    alert('Please complete the following fields:\n• ' + missing.join('\n• '));
+    return;
+  }
+
+  // Derived values (proportions 0–1 for % inputs)
+  const logPSAD   = Math.log(psad);           // natural log
+  const pctFrac   = pct_pos  / 100;           // 0–1
+  const maxFrac   = max_core / 100;           // 0–1
+  const stage_ge2 = stageEl.value === '1' ? 1 : 0;
+
+  // Grade Group indicators
+  const gg2 = grade === '2'  ? 1 : 0;
+  const gg3 = grade === '3'  ? 1 : 0;
+  const gg45= grade === '45' ? 1 : 0;
+
+  // PI-RADS indicators
+  const pirads4 = pirads === '4' ? 1 : 0;
+  const pirads5 = pirads === '5' ? 1 : 0;
+
+  // SVI-MRI ordinal (0,1,2)
+  const sviVal = parseFloat(svi_mri);
+
+  // ══════════════════════════════════════════
+  // ECE Model (Logistic)
+  // Intercept: -2.765
+  // ══════════════════════════════════════════
+  const eceRows = [
+    { name: 'Intercept',           coeff: -2.765, val: '1',                      contribution: -2.765                    },
+    { name: 'PSA Density (log)',   coeff:  0.493, val: logPSAD.toFixed(3),       contribution:  0.493 * logPSAD          },
+    { name: 'Grade Group 2',       coeff:  0.133, val: gg2,                      contribution:  0.133 * gg2              },
+    { name: 'Grade Group 3',       coeff:  0.820, val: gg3,                      contribution:  0.820 * gg3              },
+    { name: 'Grade Group 4/5',     coeff:  1.024, val: gg45,                     contribution:  1.024 * gg45             },
+    { name: 'Clinical Stage ≥T2',  coeff:  0.666, val: stage_ge2,                contribution:  0.666 * stage_ge2        },
+    { name: '% Positive Cores',   coeff:  1.150, val: pctFrac.toFixed(3),       contribution:  1.150 * pctFrac          },
+    { name: 'Max Core Involved',   coeff:  1.219, val: maxFrac.toFixed(3),       contribution:  1.219 * maxFrac          },
+    { name: 'PI-RADS 4',           coeff:  0.182, val: pirads4,                  contribution:  0.182 * pirads4          },
+    { name: 'PI-RADS 5',           coeff: -0.023, val: pirads5,                  contribution: -0.023 * pirads5          },
+    { name: 'EPE Score',           coeff:  0.637, val: epe.toFixed(2),           contribution:  0.637 * epe              },
+  ];
+  const eceLP = eceRows.reduce((s, r) => s + r.contribution, 0);
+  const eceP  = sigmoid(eceLP);
+
+  // ══════════════════════════════════════════
+  // SVI Model (Logistic)
+  // Intercept: -5.452
+  // ══════════════════════════════════════════
+  const sviRows = [
+    { name: 'Intercept',           coeff: -5.452, val: '1',                      contribution: -5.452                    },
+    { name: 'PSA Density (log)',   coeff:  0.295, val: logPSAD.toFixed(3),       contribution:  0.295 * logPSAD          },
+    { name: 'Grade Group 2',       coeff:  1.079, val: gg2,                      contribution:  1.079 * gg2              },
+    { name: 'Grade Group 3',       coeff:  1.568, val: gg3,                      contribution:  1.568 * gg3              },
+    { name: 'Grade Group 4/5',     coeff:  2.604, val: gg45,                     contribution:  2.604 * gg45             },
+    { name: 'Clinical Stage ≥T2',  coeff:  0.605, val: stage_ge2,                contribution:  0.605 * stage_ge2        },
+    { name: '% Positive Cores',   coeff:  1.596, val: pctFrac.toFixed(3),       contribution:  1.596 * pctFrac          },
+    { name: 'Max Core Involved',   coeff:  0.963, val: maxFrac.toFixed(3),       contribution:  0.963 * maxFrac          },
+    { name: 'SVI on MRI',          coeff:  1.732, val: sviVal,                   contribution:  1.732 * sviVal           },
+    // PI-RADS 4 and EPE omitted from nomogram (negligible)
+  ];
+  const sviLP = sviRows.reduce((s, r) => s + r.contribution, 0);
+  const sviP  = sigmoid(sviLP);
+
+  // ══════════════════════════════════════════
+  // BCR Model (Cox PH)
+  // S₀(60mo) = 0.249
+  // ══════════════════════════════════════════
+  const S0_60 = 0.249;
+  const bcrRows = [
+    { name: 'Age (years)',         coeff: -0.013, val: age,                       contribution: -0.013 * age              },
+    { name: 'PSA Density (log)',   coeff:  0.362, val: logPSAD.toFixed(3),        contribution:  0.362 * logPSAD          },
+    { name: 'Grade Group 2',       coeff:  0.888, val: gg2,                       contribution:  0.888 * gg2              },
+    { name: 'Grade Group 3',       coeff:  1.522, val: gg3,                       contribution:  1.522 * gg3              },
+    { name: 'Grade Group 4/5',     coeff:  1.892, val: gg45,                      contribution:  1.892 * gg45             },
+    { name: '% Positive Cores',   coeff:  0.582, val: pctFrac.toFixed(3),        contribution:  0.582 * pctFrac          },
+    { name: 'Max Core Involved',   coeff:  0.390, val: maxFrac.toFixed(3),        contribution:  0.390 * maxFrac          },
+    { name: 'EPE Score',           coeff:  0.190, val: epe.toFixed(2),            contribution:  0.190 * epe              },
+    // Clinical Stage, PI-RADS, SVI-MRI omitted (small contribution)
+  ];
+  const bcrLP   = bcrRows.reduce((s, r) => s + r.contribution, 0);
+  const bcrSurv = Math.pow(S0_60, Math.exp(bcrLP));  // BCR-free survival at 60mo
+  const bcrRisk = 1 - bcrSurv;
+
+  // ══════════════════════════════════════════
+  // Render results
+  // ══════════════════════════════════════════
+
+  // ECE
+  const ecePct = (eceP * 100).toFixed(1);
+  const eceRisk = riskLabel(eceP);
+  document.getElementById('ece-pct').textContent = ecePct;
+  document.getElementById('ece-pct').className = 'prob-num ' + eceRisk.textCls;
+  document.getElementById('ece-bar').style.width = Math.min(eceP * 100, 100) + '%';
+  document.getElementById('ece-bar').className = 'bar-fill ' + eceRisk.barCls;
+  const eceTag = document.getElementById('ece-tag');
+  eceTag.textContent = eceRisk.text;
+  eceTag.className = 'risk-label-tag ' + eceRisk.cls;
+  document.getElementById('ece-lp-table').innerHTML = buildLPTable(eceRows, eceLP);
+
+  // SVI
+  const sviPct = (sviP * 100).toFixed(1);
+  const sviRisk = riskLabel(sviP);
+  document.getElementById('svi-pct').textContent = sviPct;
+  document.getElementById('svi-pct').className = 'prob-num ' + sviRisk.textCls;
+  document.getElementById('svi-bar').style.width = Math.min(sviP * 100, 100) + '%';
+  document.getElementById('svi-bar').className = 'bar-fill ' + sviRisk.barCls;
+  const sviTag = document.getElementById('svi-tag');
+  sviTag.textContent = sviRisk.text;
+  sviTag.className = 'risk-label-tag ' + sviRisk.cls;
+  document.getElementById('svi-lp-table').innerHTML = buildLPTable(sviRows, sviLP);
+
+  // BCR
+  const bcrSurvPct = (bcrSurv * 100).toFixed(1) + '%';
+  const bcrRiskPct = (bcrRisk * 100).toFixed(1) + '%';
+  const bcrRiskLabel = riskLabel(bcrRisk);
+  document.getElementById('bcr-surv').textContent = bcrSurvPct;
+  document.getElementById('bcr-surv').className = bcrRiskLabel.textCls;
+  document.getElementById('bcr-risk-val').textContent = bcrRiskPct;
+  document.getElementById('bcr-risk-val').className = bcrRiskLabel.textCls;
+  document.getElementById('bcr-bar').style.width = Math.min(bcrRisk * 100, 100) + '%';
+  document.getElementById('bcr-bar').className = 'bar-fill ' + bcrRiskLabel.barCls;
+  const bcrTag = document.getElementById('bcr-tag');
+  bcrTag.textContent = bcrRiskLabel.text;
+  bcrTag.className = 'risk-label-tag ' + bcrRiskLabel.cls;
+  document.getElementById('bcr-lp-table').innerHTML = buildLPTable(bcrRows, bcrLP);
+
+  // Show results section
+  const resultsEl = document.getElementById('results');
+  resultsEl.style.display = 'block';
+  resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+</body>
+</html>
